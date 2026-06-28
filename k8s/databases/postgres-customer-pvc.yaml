@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-customer-pvc
+  namespace: crm-system
+  labels:
+    app: postgres-customer
+    component: database
+    tier: backend
+    database: customer
+    environment: production
+    storage: persistent
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: standard-fast
+  selector:
+    matchLabels:
+      type: ssd-fast
+  volumeMode: Filesystem

@@ -1,0 +1,124 @@
+﻿/* Variables de couleurs professionnelles - Bleu */
+:root {
+  --primary-gradient: linear-gradient(135deg, #0ea5e9 0%, #0284c7 50%, #0369a1 100%);
+  --primary-color: #0ea5e9;
+  --primary-dark: #0284c7;
+  --secondary-color: #0369a1;
+  --accent-color: #38bdf8;
+  --background: #f0f9ff;
+  --surface: #ffffff;
+  --text-primary: #0c4a6e;
+  --text-secondary: #475569;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --border: #bae6fd;
+  --shadow-sm: 0 1px 3px rgba(14, 165, 233, 0.08);
+  --shadow-md: 0 4px 12px rgba(14, 165, 233, 0.15);
+  --shadow-lg: 0 10px 30px rgba(14, 165, 233, 0.2);
+  --shadow-xl: 0 20px 40px rgba(14, 165, 233, 0.25);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 
+    'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--background);
+  color: var(--text-primary);
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Animations globales */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(30px, 30px) rotate(3deg);
+  }
+  50% {
+    transform: translate(0, 60px) rotate(6deg);
+  }
+  75% {
+    transform: translate(-30px, 30px) rotate(3deg);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { 
+    transform: translateX(0); 
+  }
+  25% { 
+    transform: translateX(-10px); 
+  }
+  75% { 
+    transform: translateX(10px); 
+  }
+}
+
+/* Scrollbar personnalisée - Style bleu professionnel */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f0f9ff;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  border-radius: 10px;
+  border: 2px solid #f0f9ff;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+}
+
+/* Sélection de texte - Style bleu */
+::selection {
+  background: rgba(14, 165, 233, 0.3);
+  color: #0c4a6e;
+}
+
+::-moz-selection {
+  background: rgba(14, 165, 233, 0.3);
+  color: #0c4a6e;
+}

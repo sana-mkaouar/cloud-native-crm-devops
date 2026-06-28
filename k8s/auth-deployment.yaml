@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: crm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "auth-service"
+        dapr.io/app-port: "8000"
+        dapr.io/log-level: "info"
+        dapr.io/config: "dapr-observability"
+    spec:
+      containers:
+        - name: auth-service
+          image: crm-app-auth-service:latest
+          imagePullPolicy: IfNotPresent
+          command: ["uvicorn"]
+          args: ["app:app", "--host", "0.0.0.0", "--port", "8000"]
+          ports:
+            - containerPort: 8000

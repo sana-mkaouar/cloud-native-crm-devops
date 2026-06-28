@@ -1,0 +1,32 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Installer les dépendances système
+RUN apt-get update && apt-get install -y \
+    gcc \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copier les dépendances d'abord (meilleure mise en cache)
+COPY requirements.txt .
+
+# Installer les dépendances Python
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copier le code source
+COPY . .
+
+# Créer le dossier pour la base de données SQLite
+RUN mkdir -p /app/data
+
+# Exposer le port
+EXPOSE 8001
+
+# Vérification de santé (optionnel)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8001/ || exit 1
+
+# Commande de démarrage
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8001"]

@@ -1,0 +1,183 @@
+{
+  "dashboard": {
+    "title": "CRM Services Dashboard",
+    "tags": ["crm", "dapr"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+        "type": "timeseries",
+        "title": "HTTP Requests Rate (req/s)",
+        "targets": [
+          {
+            "expr": "sum(rate(dapr_http_server_request_count{app_id=\"customer-service\"}[1m]))",
+            "legendFormat": "Customer Service",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(dapr_http_server_request_count{app_id=\"auth-service\"}[1m]))",
+            "legendFormat": "Auth Service",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "reqps"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "type": "timeseries",
+        "title": "HTTP Request Latency (ms)",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(dapr_http_server_latency_bucket{app_id=\"customer-service\"}[5m])) by (le))",
+            "legendFormat": "Customer Service P95",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(dapr_http_server_latency_bucket{app_id=\"auth-service\"}[5m])) by (le))",
+            "legendFormat": "Auth Service P95",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "ms"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "gridPos": { "h": 6, "w": 6, "x": 0, "y": 8 },
+        "type": "stat",
+        "title": "Customer Service - Total Requests",
+        "targets": [
+          {
+            "expr": "sum(dapr_http_server_request_count{app_id=\"customer-service\"})",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": null, "color": "green" },
+                { "value": 1000, "color": "yellow" },
+                { "value": 5000, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "gridPos": { "h": 6, "w": 6, "x": 6, "y": 8 },
+        "type": "stat",
+        "title": "Auth Service - Total Requests",
+        "targets": [
+          {
+            "expr": "sum(dapr_http_server_request_count{app_id=\"auth-service\"})",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": null, "color": "green" },
+                { "value": 1000, "color": "yellow" },
+                { "value": 5000, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "gridPos": { "h": 6, "w": 6, "x": 12, "y": 8 },
+        "type": "gauge",
+        "title": "Customer Service - Success Rate",
+        "targets": [
+          {
+            "expr": "sum(rate(dapr_http_server_request_count{app_id=\"customer-service\",status=~\"2..\"}[5m])) / sum(rate(dapr_http_server_request_count{app_id=\"customer-service\"}[5m])) * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 95, "color": "yellow" },
+                { "value": 99, "color": "green" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 6,
+        "gridPos": { "h": 6, "w": 6, "x": 18, "y": 8 },
+        "type": "gauge",
+        "title": "Auth Service - Success Rate",
+        "targets": [
+          {
+            "expr": "sum(rate(dapr_http_server_request_count{app_id=\"auth-service\",status=~\"2..\"}[5m])) / sum(rate(dapr_http_server_request_count{app_id=\"auth-service\"}[5m])) * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 95, "color": "yellow" },
+                { "value": 99, "color": "green" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 7,
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 14 },
+        "type": "timeseries",
+        "title": "Service Communication Flow (customer → auth)",
+        "targets": [
+          {
+            "expr": "sum(rate(dapr_http_server_request_count{app_id=\"auth-service\"}[1m]))",
+            "legendFormat": "Incoming to Auth Service",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "reqps"
+          }
+        }
+      }
+    ],
+    "refresh": "5s",
+    "time": { "from": "now-15m", "to": "now" }
+  },
+  "overwrite": true
+}

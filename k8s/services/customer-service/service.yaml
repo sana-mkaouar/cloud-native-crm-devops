@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: customer-service
+  namespace: crm-system
+  labels:
+    app: customer-service
+    component: microservice
+    tier: backend
+    environment: production
+  annotations:
+    # Annotations pour le load balancer
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "60"
+    
+    # Annotations pour la découverte de service
+    discovery.3scale.net/scheme: "http"
+    discovery.3scale.net/port: "3001"
+    discovery.3scale.net/description: "Customer Management Service"
+    
+    # Annotations pour Prometheus
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8081"
+    prometheus.io/path: "/metrics"
+    
+    # Annotations pour Istio (si utilisé)
+    networking.istio.io/exportTo: "."
+spec:
+  type: ClusterIP
+  # Pour l'exposition externe, utiliser LoadBalancer ou NodePort
+  # type: LoadBalancer
+  # loadBalancerIP: "xx.xx.xx.xx"
+  
+  selector:
+    app: customer-service
+    component: microservice
+  
+  ports:
+  # Port principal HTTP
+  - name: http
+    port: 3001
+    targetPort: 3001
+    protocol: TCP
+    appProtocol: http
+  
+  # Port pour les métriques
+  - name: metrics
+    port: 8081
+    targetPort: 8081
+    protocol: TCP
+    appProtocol: http
+  
+  # Port pour la gestion (JMX, debug, etc.)
+  - name: management
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  
+  # Port pour gRPC (si utilisé)
+  - name: grpc
+    port: 50051
+    targetPort: 50051
+    protocol: TCP
+    appProtocol: grpc
+  
+  sessionAffinity: None
+  # sessionAffinity: ClientIP
+  # sessionAffinityConfig:
+  #   clientIP:
+  #     timeoutSeconds: 10800
+  
+  # Configuration de l'IP externe (optionnel)
+  # externalIPs:
+  # - 192.168.1.100
+  
+  # Trafic sortant (optionnel)
+  externalTrafficPolicy: Cluster
+  # externalTrafficPolicy: Local # Pour préserver l'IP source
+  
+  # Configuration avancée
+  ipFamilies:
+  - IPv4
+  # - IPv6 # Si supporté
+  
+  ipFamilyPolicy: SingleStack
+  # ipFamilyPolicy: PreferDualStack
+  
+  publishNotReadyAddresses: false

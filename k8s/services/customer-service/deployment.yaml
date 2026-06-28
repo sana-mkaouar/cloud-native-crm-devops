@@ -1,0 +1,312 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customer-service
+  namespace: crm-system
+  labels:
+    app: customer-service
+    component: microservice
+    tier: backend
+    version: v1.0.0
+    environment: production
+  annotations:
+    configmap.reload/type: "shell"
+    configmap.reload/command: "['sh', '-c', 'kill -HUP 1']"
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: customer-service
+      component: microservice
+  template:
+    metadata:
+      labels:
+        app: customer-service
+        component: microservice
+        version: v1.0.0
+        environment: production
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3001"
+        prometheus.io/path: "/metrics"
+        prometheus.io/scheme: "http"
+        sidecar.istio.io/inject: "false"
+        checksum/config: "{{ include (print $.Template.BasePath "/configmaps.yaml") . | sha256sum }}"
+    spec:
+      serviceAccountName: customer-service-account
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: customer-service
+        image: your-registry/crm-customer-service:v1.2.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3001
+          name: http
+          protocol: TCP
+        - containerPort: 8081
+          name: metrics
+          protocol: TCP
+        env:
+        # Configuration principale
+        - name: NODE_ENV
+          value: "production"
+        - name: SERVICE_NAME
+          value: "customer-service"
+        - name: SERVICE_VERSION
+          value: "v1.2.0"
+        - name: PORT
+          value: "3001"
+        - name: METRICS_PORT
+          value: "8081"
+        
+        # Configuration base de données
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: customer-db-secret
+              key: connection-string
+        - name: DATABASE_POOL_SIZE
+          value: "10"
+        - name: DATABASE_IDLE_TIMEOUT_MS
+          value: "30000"
+        - name: DATABASE_STATEMENT_TIMEOUT
+          value: "30000"
+        
+        # Configuration services externes
+        - name: AUTH_SERVICE_URL
+          value: "http://auth-service.crm-system.svc.cluster.local:3000"
+        - name: NOTIFICATION_SERVICE_URL
+          value: "http://notification-service.crm-system.svc.cluster.local:3002"
+        - name: ELASTICSEARCH_URL
+          value: "http://elasticsearch.crm-system.svc.cluster.local:9200"
+        
+        # Configuration Redis
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: redis-secret
+              key: connection-string
+        - name: REDIS_CACHE_TTL
+          value: "3600"
+        
+        # Configuration sécurité
+        - name: JWT_PUBLIC_KEY
+          valueFrom:
+            secretKeyRef:
+              name: jwt-secrets
+              key: public-key
+        - name: API_RATE_LIMIT
+          value: "100"
+        
+        # Configuration fonctionnelle
+        - name: CUSTOMER_EXPORT_LIMIT
+          value: "10000"
+        - name: BATCH_PROCESSING_SIZE
+          value: "100"
+        - name: ENABLE_SEARCH_INDEXING
+          value: "true"
+        
+        # Monitoring
+        - name: ENABLE_METRICS
+          value: "true"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: SENTRY_DSN
+          valueFrom:
+            secretKeyRef:
+              name: monitoring-secrets
+              key: sentry-dsn
+        
+        envFrom:
+        - configMapRef:
+            name: customer-service-config
+        - configMapRef:
+            name: global-config
+        
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        
+        # Health checks
+        livenessProbe:
+          httpGet:
+            path: /health/liveness
+            port: 3001
+            scheme: HTTP
+            httpHeaders:
+            - name: X-Liveness-Probe
+              value: "true"
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health/readiness
+            port: 3001
+            scheme: HTTP
+            httpHeaders:
+            - name: X-Readiness-Probe
+              value: "true"
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        
+        startupProbe:
+          httpGet:
+            path: /health/startup
+            port: 3001
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 30
+        
+        # Lifecycle hooks
+        lifecycle:
+          preStop:
+            exec:
+              command: ["sh", "-c", "sleep 30"]
+        
+        # Security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+          seccompProfile:
+            type: RuntimeDefault
+        
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
+        - name: tmp-volume
+          mountPath: /tmp
+        - name: logs-volume
+          mountPath: /var/log/customer-service
+        
+        # Mount service account token for API calls
+        - name: service-account-token
+          mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          readOnly: true
+      
+      # Init container pour vérifier les dépendances
+      initContainers:
+      - name: check-dependencies
+        image: busybox:1.36
+        command: ['sh', '-c', '
+          echo "Checking dependencies...";
+          nc -z postgres-customer.crm-system.svc.cluster.local 5432 && echo "PostgreSQL OK";
+          nc -z redis-master.crm-system.svc.cluster.local 6379 && echo "Redis OK";
+          echo "All dependencies ready";
+        ']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+      
+      # Sidecar container pour log shipping (optionnel)
+      - name: log-shipper
+        image: fluent/fluent-bit:2.1
+        env:
+        - name: FLUENT_BIT_CONFIG_FILE
+          value: "/fluent-bit/etc/fluent-bit.conf"
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /var/log/customer-service
+        - name: fluentbit-config
+          mountPath: /fluent-bit/etc/
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      
+      volumes:
+      - name: config-volume
+        configMap:
+          name: customer-service-config
+          items:
+          - key: application.yml
+            path: application.yml
+          - key: logging.yml
+            path: logging.yml
+      
+      - name: tmp-volume
+        emptyDir:
+          medium: Memory
+          sizeLimit: 512Mi
+      
+      - name: logs-volume
+        emptyDir:
+          sizeLimit: 1Gi
+      
+      - name: service-account-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              audience: api
+              expirationSeconds: 3600
+              path: token
+      
+      - name: fluentbit-config
+        configMap:
+          name: fluentbit-config
+      
+      # Tolérations pour éviter les nœuds spécifiques
+      tolerations:
+      - key: "node-type"
+        operator: "Equal"
+        value: "application"
+        effect: "NoSchedule"
+      
+      # Affinité pour répartir sur différents nœuds
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - customer-service
+              topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - application
+      
+      # Pull secrets pour le registry privé
+      imagePullSecrets:
+      - name: registry-credentials

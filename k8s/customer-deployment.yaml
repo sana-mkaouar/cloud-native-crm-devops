@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customer-service
+  namespace: crm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: customer-service
+  template:
+    metadata:
+      labels:
+        app: customer-service
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "customer-service"
+        dapr.io/app-port: "8001"
+        dapr.io/log-level: "info"
+        dapr.io/config: "dapr-observability"
+    spec:
+      containers:
+        - name: customer-service
+          image: crm-app-customer-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8001

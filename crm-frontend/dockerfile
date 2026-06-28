@@ -1,0 +1,28 @@
+# Étape 1 : Construction de l'application frontend
+FROM node:18-alpine as build
+
+WORKDIR /app
+
+# Copier les fichiers de package.json et package-lock.json
+COPY package*.json ./
+
+# Installer toutes les dépendances
+RUN npm install
+
+# Copier le reste des fichiers du projet
+COPY . .
+
+# Construire l'application
+RUN npm run build
+
+# Étape 2 : Utiliser Nginx pour servir l'application construite
+FROM nginx:alpine
+
+# Copier le build React dans l'image Nginx
+COPY --from=build /app/build /usr/share/nginx/html
+
+# Exposer le port 80 pour accéder à l'application
+EXPOSE 80
+
+# Lancer Nginx
+CMD ["nginx", "-g", "daemon off;"]

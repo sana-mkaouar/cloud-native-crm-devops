@@ -1,0 +1,135 @@
+services:
+  # Base de données pour auth
+  auth-db-1:
+    image: postgres:15-alpine
+    container_name: auth-db-1
+    environment:
+      POSTGRES_DB: auth
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    networks:
+      - crm-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Base de données pour customers
+  customer-db-1:
+    image: postgres:15-alpine
+    container_name: customer-db-1
+    environment:
+      POSTGRES_DB: customers
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - customer-db-data:/var/lib/postgresql/data
+    networks:
+      - crm-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Service d'authentification
+  auth-service:
+    build: 
+      context: ./auth-service
+    container_name: crm-auth-service
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@auth-db-1:5432/auth
+      - SECRET_KEY=your-secret-key-change-in-production
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+    depends_on:
+      auth-db-1:
+        condition: service_healthy
+    networks:
+      - crm-network
+    restart: unless-stopped
+
+  # Service customers
+  customer-service:
+    build:
+      context: ./customer-service
+    container_name: crm-customer-service
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@customer-db-1:5432/customers
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:80
+    depends_on:
+      customer-db-1:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - crm-network
+    restart: unless-stopped
+
+  # Frontend React
+  frontend:
+    build:
+      context: ./crm-frontend
+    container_name: crm-frontend-1
+    ports:
+      - "3000:80"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8001
+      - REACT_APP_AUTH_URL=http://localhost:8000
+    depends_on:
+      - customer-service
+      - auth-service
+    networks:
+      - crm-network
+    restart: unless-stopped
+
+  # Nginx reverse proxy
+  nginx-proxy-1:
+    image: nginx:alpine
+    container_name: nginx-proxy-1
+    ports:
+      - "80:80"
+    volumes:
+      - ./crm-frontend/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - auth-service
+      - customer-service
+    networks:
+      - crm-network
+    restart: unless-stopped
+
+  # PostgreSQL principal
+  crm-postgres:
+    image: postgres:15-alpine
+    container_name: crm-postgres
+    environment:
+      POSTGRES_DB: crmdb
+      POSTGRES_USER: crmuser
+      POSTGRES_PASSWORD: crmpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - crm-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crmuser -d crmdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  crm-network:
+    driver: bridge
+
+volumes:
+  auth-db-data:
+  customer-db-data:
+  postgres-data:
