@@ -164,13 +164,11 @@ Grafana presents both infrastructure-level and service-level dashboards, includi
 | Metrics | Prometheus scrape target checks |
 | Monitoring | Grafana dashboards for system resources and application requests |
 
-## Project team
-
-**Sana Mkaouar** and **Tasnim Khedhri**  
+## Project  
 National Engineering School of Tunis (ENIT), University of Tunis El Manar  
 Academic year **2025–2026**  
 Course: *Advanced Services Architecture*  
-Supervisor: **Mr. Mohamed Eschiekh** (as named on the report cover)
+Supervisor: **Mr. Mohamed Eschiekh** 
 
 ## Documentation and notes
 
